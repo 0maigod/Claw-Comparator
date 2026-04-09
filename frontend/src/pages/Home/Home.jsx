@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../../ui/Card/Card';
 import Button from '../../ui/Button/Button';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 const Home = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/reports')
+    fetch(`${API_URL}/api/reports`)
       .then(r => r.json())
       .then(res => {
         if(res.status === 'success') {

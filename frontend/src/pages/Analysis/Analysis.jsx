@@ -11,6 +11,8 @@ import D3CirclePacking from '../../ui/Charts/D3CirclePacking';
 import ConceptDiffViewer from '../../ui/DiffViewer/ConceptDiffViewer';
 import ReactDiffViewer from 'react-diff-viewer-continued';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 const Analysis = () => {
     const [searchParams] = useSearchParams();
     const urlReportId = searchParams.get('reportId');
@@ -73,7 +75,7 @@ const Analysis = () => {
     useEffect(() => {
         if (urlReportId) {
             setLoading(true);
-            fetch(`http://localhost:3001/api/reports/${urlReportId}`)
+            fetch(`${API_URL}/api/reports/${urlReportId}`)
                 .then(r => r.json())
                 .then(data => {
                     if (data.status === 'success') {
@@ -93,7 +95,7 @@ const Analysis = () => {
         if (!pathA || !pathB) { setError('Las rutas son obligatorias.'); return; }
         setError(''); setLoading(true); setResult(null);
         try {
-            const resp = await fetch('http://localhost:3001/api/analyze', {
+            const resp = await fetch(`${API_URL}/api/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ system_a_path: pathA, system_b_path: pathB })
@@ -131,7 +133,7 @@ const Analysis = () => {
                 agent_name: agentName,
                 report_id: result?.id  // Opcional: si está lo usamos para cachear
             };
-            const resp = await fetch('http://localhost:3001/api/agent-concepts', {
+            const resp = await fetch(`${API_URL}/api/agent-concepts`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -152,7 +154,7 @@ const Analysis = () => {
         setOrgLoading(true);
         try {
             const reportId = result?.id || urlReportId;
-            const resp = await fetch(`http://localhost:3001/api/reports/${reportId}/tree`);
+            const resp = await fetch(`${API_URL}/api/reports/${reportId}/tree`);
             const data = await resp.json();
             if (data.status === 'success') setOrgTree(data.data);
         } catch (err) {
@@ -183,7 +185,7 @@ const Analysis = () => {
                 agent_name: node.realAgentName,
                 relative_file_path: node.path
             };
-            const resp = await fetch('http://localhost:3001/api/diff', {
+            const resp = await fetch(`${API_URL}/api/diff`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -211,7 +213,7 @@ const Analysis = () => {
                 relative_file_path: selectedFileData.node.path,
                 new_content: editContent
             };
-            const resp = await fetch('http://localhost:3001/api/save-file', {
+            const resp = await fetch(`${API_URL}/api/save-file`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

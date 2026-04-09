@@ -4,7 +4,7 @@ import cors from 'cors';
 import analysisController from './src/controllers/analysisController.js';
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 // Middlewares
 app.use(cors());
