@@ -1,7 +1,7 @@
 {
   "name": "claw-comparator-backend",
   "version": "1.0.0",
-  "description": "Backend ciego para OpenClaw Comparator",
+  "description": "Backend para OpenClaw Comparator",
   "main": "server.js",
   "type": "module",
   "scripts": {
