@@ -6,7 +6,7 @@ import './styles/tokens.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter basename="/claw-comparator">
+    <BrowserRouter basename="/openclaw-comparator">
       <App />
     </BrowserRouter>
   </React.StrictMode>,

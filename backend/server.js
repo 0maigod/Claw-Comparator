@@ -33,5 +33,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Backend Ciego de OpenClaw Comparator escuchando en http://localhost:${PORT}`);
+    console.log(`Backend OpenClaw Comparator escuchando en http://localhost:${PORT}`);
 });
