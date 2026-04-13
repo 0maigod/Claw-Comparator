@@ -19,6 +19,9 @@ const Analysis = () => {
 
     const [pathA, setPathA] = useState(() => localStorage.getItem('pathA') || '');
     const [pathB, setPathB] = useState(() => localStorage.getItem('pathB') || '');
+    const [machineA, setMachineA] = useState(() => localStorage.getItem('machineA') || 'local');
+    const [machineB, setMachineB] = useState(() => localStorage.getItem('machineB') || 'local');
+    const [machines, setMachines] = useState([{ id: 'local', name: 'Este Equipo (Local)' }]);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(() => {
         if (urlReportId) return null;
@@ -50,17 +53,61 @@ const Analysis = () => {
     const [editContent, setEditContent] = useState('');
     const [savingFile, setSavingFile] = useState(false);
 
+    // Layout States
+    const [isBarChartModalOpen, setIsBarChartModalOpen] = useState(false);
+    const [isWorkspacesExpanded, setIsWorkspacesExpanded] = useState(false);
+
     // Derive human-readable system labels from paths
-    const labelA = useMemo(() => pathA ? pathA.split(/[/\\]/).filter(Boolean).pop() || 'Sistema A' : 'Sistema A', [pathA]);
-    const labelB = useMemo(() => pathB ? pathB.split(/[/\\]/).filter(Boolean).pop() || 'Sistema B' : 'Sistema B', [pathB]);
+    const labelA = useMemo(() => {
+        const m = machines.find(x => x.id === machineA);
+        if (m && m.type === 'ssh') return m.name.includes('-') ? m.name.split('-').pop().trim() : m.name;
+        return pathA ? pathA.split(/[/\\]/).filter(Boolean).pop() || 'Sistema A' : 'Sistema A';
+    }, [pathA, machineA, machines]);
+
+    const labelB = useMemo(() => {
+        const m = machines.find(x => x.id === machineB);
+        if (m && m.type === 'ssh') return m.name.includes('-') ? m.name.split('-').pop().trim() : m.name;
+        return pathB ? pathB.split(/[/\\]/).filter(Boolean).pop() || 'Sistema B' : 'Sistema B';
+    }, [pathB, machineB, machines]);
+
+    // Pre-fill SSH path safely
+    useEffect(() => {
+        const mA = machines.find(m => m.id === machineA);
+        if (mA && mA.type === 'ssh' && (!pathA || pathA === '')) {
+            setPathA('~/.openclaw');
+        } else if (mA && mA.type === 'local' && pathA === '~/.openclaw') {
+            setPathA('');
+        }
+    }, [machineA, machines]);
+
+    useEffect(() => {
+        const mB = machines.find(m => m.id === machineB);
+        if (mB && mB.type === 'ssh' && (!pathB || pathB === '')) {
+            setPathB('~/.openclaw');
+        } else if (mB && mB.type === 'local' && pathB === '~/.openclaw') {
+            setPathB('');
+        }
+    }, [machineB, machines]);
+
+    // Fetch machines on mount
+    useEffect(() => {
+        fetch(`${API_URL}/api/machines`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') setMachines(data.data);
+            })
+            .catch(console.error);
+    }, []);
 
     // Persist paths
     useEffect(() => {
         if (!urlReportId) {
             localStorage.setItem('pathA', pathA);
             localStorage.setItem('pathB', pathB);
+            localStorage.setItem('machineA', machineA);
+            localStorage.setItem('machineB', machineB);
         }
-    }, [pathA, pathB, urlReportId]);
+    }, [pathA, pathB, machineA, machineB, urlReportId]);
 
     // Persist latest analysis result
     useEffect(() => {
@@ -80,8 +127,18 @@ const Analysis = () => {
                 .then(data => {
                     if (data.status === 'success') {
                         setResult(data.data);
-                        if (data.data.system_a_path) setPathA(data.data.system_a_path);
-                        if (data.data.system_b_path) setPathB(data.data.system_b_path);
+                        if (data.data.system_a_path) {
+                            const pA = data.data.system_a_path;
+                            const splA = pA.indexOf('::');
+                            if (splA > -1) { setMachineA(pA.substring(0, splA)); setPathA(pA.substring(splA + 2)); }
+                            else { setMachineA('local'); setPathA(pA); }
+                        }
+                        if (data.data.system_b_path) {
+                            const pB = data.data.system_b_path;
+                            const splB = pB.indexOf('::');
+                            if (splB > -1) { setMachineB(pB.substring(0, splB)); setPathB(pB.substring(splB + 2)); }
+                            else { setMachineB('local'); setPathB(pB); }
+                        }
                     } else {
                         setError('Reporte histórico no encontrado');
                     }
@@ -95,10 +152,12 @@ const Analysis = () => {
         if (!pathA || !pathB) { setError('Las rutas son obligatorias.'); return; }
         setError(''); setLoading(true); setResult(null);
         try {
+            const sysA = `${machineA}::${pathA}`;
+            const sysB = `${machineB}::${pathB}`;
             const resp = await fetch(`${API_URL}/api/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ system_a_path: pathA, system_b_path: pathB })
+                body: JSON.stringify({ system_a_path: sysA, system_b_path: sysB })
             });
             const data = await resp.json();
             if (data.status === 'success') setResult(data.data);
@@ -112,10 +171,10 @@ const Analysis = () => {
 
     const fetchAgentConcepts = async (agentName) => {
         // Resolver paths: preferir los del resultado, si no, los del input
-        const resolvedPathA = result?.system_a_path || pathA;
-        const resolvedPathB = result?.system_b_path || pathB;
+        const resolvedPathA = result?.system_a_path || `${machineA}::${pathA}`;
+        const resolvedPathB = result?.system_b_path || `${machineB}::${pathB}`;
 
-        if (!resolvedPathA || !resolvedPathB) {
+        if (!pathA || !pathB) {
             setError('No se encontraron las rutas del sistema. Por favor ingresá los paths manualmente y volvé a analizar.');
             setIsAIModalOpen(true);
             return;
@@ -149,7 +208,6 @@ const Analysis = () => {
     };
 
     const openOrgChart = async () => {
-        setIsOrgModalOpen(true);
         if (orgTree) return; // Already fetched
         setOrgLoading(true);
         try {
@@ -170,8 +228,8 @@ const Analysis = () => {
     };
 
     const handleFileClick = async (node, systemLabel) => {
-        const resolvedPathA = result?.system_a_path || pathA;
-        const resolvedPathB = result?.system_b_path || pathB;
+        const resolvedPathA = result?.system_a_path || `${machineA}::${pathA}`;
+        const resolvedPathB = result?.system_b_path || `${machineB}::${pathB}`;
 
         setEditingMode(null);
         setSelectedFileData({ node, systemLabel, textA: '', textB: '' });
@@ -206,7 +264,7 @@ const Analysis = () => {
     const handleSaveFile = async () => {
         setSavingFile(true);
         try {
-            const systemPath = editingMode === 'A' ? (result?.system_a_path || pathA) : (result?.system_b_path || pathB);
+            const systemPath = editingMode === 'A' ? (result?.system_a_path || `${machineA}::${pathA}`) : (result?.system_b_path || `${machineB}::${pathB}`);
             const payload = {
                 system_path: systemPath,
                 agent_name: selectedFileData.node.realAgentName,
@@ -243,18 +301,26 @@ const Analysis = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
             {/* Configuración de Paths con indicadores de color A / B */}
-            <Card title="Configurar Local Paths">
+            <Card title="Configurar Orígenes de Datos (Local o SSH)">
                 <div style={{ display: 'flex', gap: 'var(--spacing-md)', alignItems: 'center', marginTop: 'var(--spacing-sm)' }}>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#3b82f6', flexShrink: 0 }} />
                             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3b82f6' }}>{labelA}</span>
                         </div>
-                        <input
-                            placeholder="Ruta Absoluta: Sistema A (ej. C:\agentes_v1)"
-                            value={pathA} onChange={e => setPathA(e.target.value)}
-                            style={{ padding: '12px', borderRadius: 'var(--radius-sm)', border: '2px solid rgba(59,130,246,0.3)', width: '100%', boxSizing: 'border-box' }}
-                        />
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                            <select 
+                                value={machineA} onChange={e => setMachineA(e.target.value)}
+                                style={{ padding: '12px', borderRadius: 'var(--radius-sm)', border: '2px solid rgba(59,130,246,0.3)', minWidth: '120px', backgroundColor: '#fff' }}
+                            >
+                                {machines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                            </select>
+                            <input
+                                placeholder="Ruta Absoluta (ej. /var/www/agentes)"
+                                value={pathA} onChange={e => setPathA(e.target.value)}
+                                style={{ padding: '12px', borderRadius: 'var(--radius-sm)', border: '2px solid rgba(59,130,246,0.3)', width: '100%', boxSizing: 'border-box' }}
+                            />
+                        </div>
                     </div>
                     <span style={{ color: 'var(--color-text-secondary)', fontWeight: 700, fontSize: '1.1rem' }}>VS</span>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -262,11 +328,19 @@ const Analysis = () => {
                             <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#10b981', flexShrink: 0 }} />
                             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981' }}>{labelB}</span>
                         </div>
-                        <input
-                            placeholder="Ruta Absoluta: Sistema B (ej. C:\agentes_v2)"
-                            value={pathB} onChange={e => setPathB(e.target.value)}
-                            style={{ padding: '12px', borderRadius: 'var(--radius-sm)', border: '2px solid rgba(16,185,129,0.3)', width: '100%', boxSizing: 'border-box' }}
-                        />
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                            <select 
+                                value={machineB} onChange={e => setMachineB(e.target.value)}
+                                style={{ padding: '12px', borderRadius: 'var(--radius-sm)', border: '2px solid rgba(16,185,129,0.3)', minWidth: '120px', backgroundColor: '#fff' }}
+                            >
+                                {machines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                            </select>
+                            <input
+                                placeholder="Ruta Absoluta (ej. /var/www/agentes)"
+                                value={pathB} onChange={e => setPathB(e.target.value)}
+                                style={{ padding: '12px', borderRadius: 'var(--radius-sm)', border: '2px solid rgba(16,185,129,0.3)', width: '100%', boxSizing: 'border-box' }}
+                            />
+                        </div>
                     </div>
                     <Button onClick={runAnalysis} disabled={loading}>
                         {loading ? 'Procesando...' : 'Iniciar Análisis'}
@@ -276,8 +350,23 @@ const Analysis = () => {
             </Card>
 
             {loading && (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
-                    <h2>Ciego calculando diferencias sintácticas...</h2>
+                <div style={{ textAlign: 'center', padding: '80px', color: 'var(--color-text-secondary)' }}>
+                    <svg width="100%" viewBox="0 0 680 100" xmlns="http://www.w3.org/2000/svg">
+                        <style>{`
+                            .dot { animation: bounce 1.2s ease-in-out infinite; }
+                            .dot1 { animation-delay: 0s; }
+                            .dot2 { animation-delay: 0.2s; }
+                            .dot3 { animation-delay: 0.4s; }
+                            @keyframes bounce {
+                                0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
+                                40% { transform: translateY(-30px); opacity: 1; }
+                            }
+                        `}</style>
+                        <circle className="dot dot1" cx="310" cy="50" r="10" fill="#7F77DD"/>
+                        <circle className="dot dot2" cx="340" cy="50" r="10" fill="#7F77DD"/>
+                        <circle className="dot dot3" cx="370" cy="50" r="10" fill="#7F77DD"/>
+                    </svg>
+                    <h2 style={{ marginTop: '16px' }}>Ciego calculando diferencias sintácticas...</h2>
                 </div>
             )}
 
@@ -310,6 +399,14 @@ const Analysis = () => {
                                     </div>
                                 </div>
                             </Card>
+                            <Card title="Comparativa Volumétrica por Agente">
+                                <div onClick={() => setIsBarChartModalOpen(true)} style={{ cursor: 'pointer', transition: 'all 0.2s', padding: '8px 0' }} title="Clic para expandir el gráfico completo">
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', textAlign: 'center', marginBottom: '16px' }}>Clic para ampliar gráfico completo</div>
+                                    <div style={{ display: 'flex', justifyContent: 'center', margin: '0 auto', pointerEvents: 'none' }}>
+                                        <D3BarChart data={result.metrics} width={350} height={150} minimal={true} />
+                                    </div>
+                                </div>
+                            </Card>
                         </div>
                         {/* Columna Derecha (Mitad del espacio) */}
                         <div style={{ flex: '1 1 300px', display: 'flex' }}>
@@ -331,14 +428,54 @@ const Analysis = () => {
                         />
                     </Card>
 
-                    {/* Bar Chart + Organigrama button */}
-                    <Card title="Comparativa Volumétrica por Agente">
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-                            <Button onClick={openOrgChart} style={{ padding: '6px 14px', fontSize: '0.78rem' }}>
-                                🗂 Ver Organigrama
+                    {/* Estructura de Workspaces List */}
+                    <Card title="Estructura de Workspaces">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Button 
+                                onClick={() => {
+                                    setIsWorkspacesExpanded(!isWorkspacesExpanded);
+                                    if (!isWorkspacesExpanded && !orgTree && !orgLoading) openOrgChart();
+                                }} 
+                                style={{ padding: '6px 14px', fontSize: '0.78rem', backgroundColor: 'transparent', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}
+                            >
+                                {isWorkspacesExpanded ? '🔼 Ocultar Organigrama' : '🔽 Expandir Organigrama Completo'}
                             </Button>
                         </div>
-                        <D3BarChart data={result.metrics} width={800} height={250} />
+                        {isWorkspacesExpanded && (
+                            <div style={{ marginTop: '16px' }}>
+                                {orgLoading && (
+                                    <div style={{ textAlign: 'center', padding: '60px', color: 'var(--color-text-secondary)' }}>
+                                        <svg width="100%" viewBox="0 0 680 100" xmlns="http://www.w3.org/2000/svg">
+                                            <style>{`
+                                                .dot { animation: bounce 1.2s ease-in-out infinite; }
+                                                .dot1 { animation-delay: 0s; }
+                                                .dot2 { animation-delay: 0.2s; }
+                                                .dot3 { animation-delay: 0.4s; }
+                                                @keyframes bounce {
+                                                    0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
+                                                    40% { transform: translateY(-30px); opacity: 1; }
+                                                }
+                                            `}</style>
+                                            <circle className="dot dot1" cx="310" cy="50" r="10" fill="#7F77DD"/>
+                                            <circle className="dot dot2" cx="340" cy="50" r="10" fill="#7F77DD"/>
+                                            <circle className="dot dot3" cx="370" cy="50" r="10" fill="#7F77DD"/>
+                                        </svg>
+                                        <h3 style={{ marginTop: '16px' }}>Escaneando estructura de carpetas...</h3>
+                                    </div>
+                                )}
+                                {orgTree && !orgLoading && (
+                                    <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '16px', backgroundColor: 'var(--color-bg-canvas)' }}>
+                                        <D3OrgChart
+                                            treeA={orgTree.treeA}
+                                            treeB={orgTree.treeB}
+                                            labelA={labelA}
+                                            labelB={labelB}
+                                            onFileClick={handleFileClick}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </Card>
 
                     {/* Detalle por Agente */}
@@ -377,22 +514,11 @@ const Analysis = () => {
                 </>
             )}
 
-            {/* Modal: Organigrama */}
-            <Modal isOpen={isOrgModalOpen} onClose={() => setIsOrgModalOpen(false)} title={`Organigrama: ${labelA} vs ${labelB}`} disableEsc={isFileDiffModalOpen} maxWidth="1100px">
-                {orgLoading && (
-                    <div style={{ textAlign: 'center', padding: '60px', color: 'var(--color-text-secondary)' }}>
-                        <h3>Escaneando estructura de carpetas...</h3>
-                    </div>
-                )}
-                {orgTree && !orgLoading && (
-                    <D3OrgChart
-                        treeA={orgTree.treeA}
-                        treeB={orgTree.treeB}
-                        labelA={labelA}
-                        labelB={labelB}
-                        onFileClick={handleFileClick}
-                    />
-                )}
+            {/* Modal: Bar Chart Expandido */}
+            <Modal isOpen={isBarChartModalOpen} onClose={() => setIsBarChartModalOpen(false)} title={`Comparativa Volumétrica: ${labelA} vs ${labelB}`} disableEsc={false} maxWidth="1000px">
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+                    <D3BarChart data={result?.metrics || []} width={900} height={400} />
+                </div>
             </Modal>
 
             {/* Modal Nivel 1: D3 Circle Packing */}

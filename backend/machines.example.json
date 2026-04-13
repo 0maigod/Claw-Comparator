@@ -1,0 +1,16 @@
+[
+  {
+    "id": "local",
+    "name": "Este Equipo (Local)",
+    "type": "local"
+  },
+  {
+    "id": "demo-server",
+    "name": "Server 01 - Demo",
+    "type": "ssh",
+    "host": "192.168.1.100",
+    "port": 22,
+    "username": "admin",
+    "privateKeyPath": "~/.ssh/id_rsa"
+  }
+]

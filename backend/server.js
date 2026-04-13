@@ -11,6 +11,8 @@ app.use(cors());
 app.use(express.json());
 
 // Main Endpoints
+// Retorna las maquinas configuradas
+app.get('/api/machines', analysisController.getMachines);
 // Retorna histórico de reportes para el home dashboard
 app.get('/api/reports', analysisController.getHistoricalReports);
 // Obtiene el detalle completo de un reporte histórico (con sus métricas)

@@ -55,3 +55,6 @@ coverage/
 # Temp files
 tmp/
 temp/
+
+# Secrets and Configs
+backend/machines.json

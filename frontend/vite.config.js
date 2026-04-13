@@ -5,4 +5,13 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: '/openclaw-comparator/',
   plugins: [react()],
+  server: {
+    proxy: {
+      '/openclaw-comparator/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/openclaw-comparator\/api/, '/api')
+      }
+    }
+  }
 })

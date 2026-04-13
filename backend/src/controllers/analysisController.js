@@ -1,6 +1,26 @@
 import { analyzeSystems, getSpecificDiff, getAllAgentDiffs, getSystemTree, saveFileToDisk } from '../services/diffService.js';
 import { extractConceptsFromDiff } from '../services/aiService.js';
 import { dbQuery, dbRun } from '../database/db.js';
+import fs from 'fs';
+import path from 'path';
+
+export const getMachines = async (req, res, next) => {
+    try {
+        const machinesPath = path.resolve(process.cwd(), 'machines.json');
+        let machines = [{ id: 'local', name: 'Este Equipo (Local)', type: 'local' }];
+        if (fs.existsSync(machinesPath)) {
+            machines = JSON.parse(fs.readFileSync(machinesPath, 'utf-8'));
+            // Removemos passwords o keys por seguridad al exponer al frontend
+            machines = machines.map(m => {
+                const { password, privateKeyPath, ...safeMachine } = m;
+                return safeMachine;
+            });
+        }
+        res.json({ status: 'success', data: machines });
+    } catch (err) {
+        next(err);
+    }
+};
 
 export const getHistoricalReports = async (req, res, next) => {
     try {
@@ -165,6 +185,7 @@ export const saveFile = async (req, res, next) => {
 };
 
 export default {
+    getMachines,
     getHistoricalReports,
     getReportById,
     runAnalysis,
