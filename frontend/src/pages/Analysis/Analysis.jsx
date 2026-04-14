@@ -623,8 +623,18 @@ const Analysis = () => {
                             />
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 16px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)', position: 'relative' }}>
+                            <div style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                padding: '16px', 
+                                position: 'sticky', 
+                                top: '-24px', 
+                                zIndex: 10, 
+                                backgroundColor: 'var(--color-bg-card)',
+                                margin: '-24px -24px 0 -24px',
+                                borderBottom: '1px solid var(--color-bg-canvas)'
+                            }}>
                                 <Button onClick={() => { setEditContent(selectedFileData.textA); setEditingMode('A'); }} style={{ padding: '6px 12px', fontSize: '0.8rem', backgroundColor: '#3b82f6' }}>✏️ Editar {labelA}</Button>
                                 <Button onClick={() => { setEditContent(selectedFileData.textB); setEditingMode('B'); }} style={{ padding: '6px 12px', fontSize: '0.8rem', backgroundColor: '#10b981' }}>✏️ Editar {labelB}</Button>
                             </div>
