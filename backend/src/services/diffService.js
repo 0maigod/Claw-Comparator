@@ -220,6 +220,19 @@ export const saveFileToDisk = async (sysPath, agentName, relativeFilePath, newCo
     await fsObj.writeFile(fullPath, newContent, 'utf-8');
 };
 
+export const deleteFileFromDisk = async (sysPath, agentName, relativeFilePath) => {
+    const { machineId, realPath } = parseSystemPath(sysPath);
+    const fsObj = getFsProvider(machineId);
+    
+    const fullPath = fsObj.joinPath(realPath, agentName, relativeFilePath);
+    try {
+        await fsObj.unlink(fullPath);
+    } catch(err) {
+        console.error(`[DiffService] Error deleting file ${fullPath}:`, err.message);
+        throw err;
+    }
+};
+
 export const getAllAgentDiffs = async (sysA_Path, sysB_Path, agentName) => {
     const { agents: agentsA, fsObj: fsA } = await scanSystemAgents(sysA_Path);
     const { agents: agentsB, fsObj: fsB } = await scanSystemAgents(sysB_Path);
@@ -308,5 +321,6 @@ export default {
     getSpecificDiff,
     getAllAgentDiffs,
     getSystemTree,
-    saveFileToDisk
+    saveFileToDisk,
+    deleteFileFromDisk
 };

@@ -26,6 +26,10 @@ export class LocalFs {
         return await fs.mkdir(dirPath, options);
     }
 
+    async unlink(filePath) {
+        return await fs.unlink(filePath);
+    }
+
     async writeFile(filePath, data, encoding = 'utf-8') {
         return await fs.writeFile(filePath, data, encoding);
     }

@@ -27,6 +27,8 @@ app.post('/api/diff', analysisController.getAgentDiff);
 app.post('/api/agent-concepts', analysisController.getAgentConcepts);
 // Guarda modificaciones del editor en disco
 app.post('/api/save-file', analysisController.saveFile);
+// Borra un archivo en disco
+app.delete('/api/file', analysisController.deleteFile);
 
 // Error Handling Global (Regla IV: Nunca silencies un error)
 app.use((err, req, res, next) => {

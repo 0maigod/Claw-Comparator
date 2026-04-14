@@ -1,4 +1,4 @@
-import { analyzeSystems, getSpecificDiff, getAllAgentDiffs, getSystemTree, saveFileToDisk } from '../services/diffService.js';
+import { analyzeSystems, getSpecificDiff, getAllAgentDiffs, getSystemTree, saveFileToDisk, deleteFileFromDisk } from '../services/diffService.js';
 import { extractConceptsFromDiff } from '../services/aiService.js';
 import { dbQuery, dbRun } from '../database/db.js';
 import fs from 'fs';
@@ -184,6 +184,19 @@ export const saveFile = async (req, res, next) => {
     }
 };
 
+export const deleteFile = async (req, res, next) => {
+    try {
+        const { system_path, agent_name, relative_file_path } = req.body;
+        if (!system_path || !agent_name || !relative_file_path) {
+            return res.status(400).json({ status: 'error', message: 'Missing args for delete' });
+        }
+        await deleteFileFromDisk(system_path, agent_name, relative_file_path);
+        res.json({ status: 'success' });
+    } catch (err) {
+        next(err);
+    }
+};
+
 export default {
     getMachines,
     getHistoricalReports,
@@ -192,5 +205,6 @@ export default {
     getAgentDiff,
     getAgentConcepts,
     getReportTree,
-    saveFile
+    saveFile,
+    deleteFile
 };

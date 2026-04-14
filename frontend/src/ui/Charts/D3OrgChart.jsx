@@ -3,13 +3,13 @@ import React, { useEffect, useRef } from 'react';
 /**
  * D3OrgChart: Árbol interactivo Sincronizado de lado a lado.
  */
-const D3OrgChart = ({ treeA, treeB, labelA = 'Sistema A', labelB = 'Sistema B', onFileClick }) => {
+const D3OrgChart = ({ treeA, treeB, labelA = 'Sistema A', labelB = 'Sistema B', onFileClick, onFileDelete }) => {
     const containerRef = useRef(null);
 
     useEffect(() => {
         if (!containerRef.current) return;
-        renderUnifiedTree(containerRef.current, treeA, treeB, labelA, labelB, onFileClick);
-    }, [treeA, treeB, labelA, labelB, onFileClick]);
+        renderUnifiedTree(containerRef.current, treeA, treeB, labelA, labelB, onFileClick, onFileDelete);
+    }, [treeA, treeB, labelA, labelB, onFileClick, onFileDelete]);
 
     return (
         <div style={{ width: '100%', overflowX: 'auto', borderRadius: '4px' }}>
@@ -75,7 +75,7 @@ function unifyTrees(nodeA, nodeB, name) {
     return unified;
 }
 
-function renderUnifiedTree(container, treeA, treeB, labelA, labelB, onFileClick) {
+function renderUnifiedTree(container, treeA, treeB, labelA, labelB, onFileClick, onFileDelete) {
     if (!container) return;
     container.innerHTML = '';
 
@@ -130,10 +130,22 @@ function renderUnifiedTree(container, treeA, treeB, labelA, labelB, onFileClick)
             row.style.display = 'flex';
             row.style.borderBottom = '1px solid rgba(0,0,0,0.02)';
             
-            row.onmouseenter = () => { row.style.background = 'rgba(99,102,241,0.06)'; };
-            row.onmouseleave = () => { row.style.background = 'transparent'; };
+            row.deleteButtons = [];
 
-            const renderCell = (sourceNode, colorSystem) => {
+            row.onmouseenter = () => { 
+                row.style.background = 'rgba(99,102,241,0.06)'; 
+                if (row.deleteButtons) {
+                    row.deleteButtons.forEach(btn => btn.style.display = 'inline-block');
+                }
+            };
+            row.onmouseleave = () => { 
+                row.style.background = 'transparent'; 
+                if (row.deleteButtons) {
+                    row.deleteButtons.forEach(btn => btn.style.display = 'none');
+                }
+            };
+
+            const renderCell = (sourceNode, colorSystem, systemLabel) => {
                 const cell = document.createElement('div');
                 cell.style.flex = '1';
                 cell.style.display = 'flex';
@@ -193,14 +205,33 @@ function renderUnifiedTree(container, treeA, treeB, labelA, labelB, onFileClick)
                     cell.appendChild(count);
                 }
                 
+                if (sourceNode.type === 'file' && onFileDelete) {
+                    const delBtn = document.createElement('span');
+                    delBtn.textContent = '🗑️';
+                    delBtn.style.fontSize = '14px';
+                    delBtn.style.marginLeft = 'auto'; // empuja a la derecha
+                    delBtn.style.cursor = 'pointer';
+                    delBtn.style.display = 'none';
+                    delBtn.title = `Eliminar ${sourceNode.name} de ${systemLabel}`;
+                    delBtn.onmouseenter = () => { delBtn.style.transform = 'scale(1.2)'; };
+                    delBtn.onmouseleave = () => { delBtn.style.transform = 'scale(1)'; };
+                    delBtn.style.transition = 'transform 0.1s ease';
+                    delBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        onFileDelete(sourceNode, systemLabel);
+                    };
+                    cell.appendChild(delBtn);
+                    row.deleteButtons.push(delBtn);
+                }
+                
                 return cell;
             };
 
-            const cellA = renderCell(node.nodeA, '#3b82f6'); 
+            const cellA = renderCell(node.nodeA, '#3b82f6', labelA); 
             const cellDivider = document.createElement('div');
             cellDivider.style.width = '1px';
             cellDivider.style.backgroundColor = 'rgba(0,0,0,0.05)';
-            const cellB = renderCell(node.nodeB, '#10b981'); 
+            const cellB = renderCell(node.nodeB, '#10b981', labelB); 
 
             row.onclick = () => {
                 if (hasChildren) {

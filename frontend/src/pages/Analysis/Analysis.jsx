@@ -73,21 +73,21 @@ const Analysis = () => {
     // Pre-fill SSH path safely
     useEffect(() => {
         const mA = machines.find(m => m.id === machineA);
-        if (mA && mA.type === 'ssh' && (!pathA || pathA === '')) {
-            setPathA('~/.openclaw');
-        } else if (mA && mA.type === 'local' && pathA === '~/.openclaw') {
+        if (mA && mA.type === 'ssh') {
+            if (pathA !== '~/.openclaw') setPathA('~/.openclaw');
+        } else if (mA && mA.type !== 'ssh' && pathA === '~/.openclaw') {
             setPathA('');
         }
-    }, [machineA, machines]);
+    }, [machineA, machines, pathA]);
 
     useEffect(() => {
         const mB = machines.find(m => m.id === machineB);
-        if (mB && mB.type === 'ssh' && (!pathB || pathB === '')) {
-            setPathB('~/.openclaw');
-        } else if (mB && mB.type === 'local' && pathB === '~/.openclaw') {
+        if (mB && mB.type === 'ssh') {
+            if (pathB !== '~/.openclaw') setPathB('~/.openclaw');
+        } else if (mB && mB.type !== 'ssh' && pathB === '~/.openclaw') {
             setPathB('');
         }
-    }, [machineB, machines]);
+    }, [machineB, machines, pathB]);
 
     // Fetch machines on mount
     useEffect(() => {
@@ -150,10 +150,17 @@ const Analysis = () => {
 
     const runAnalysis = async () => {
         if (!pathA || !pathB) { setError('Las rutas son obligatorias.'); return; }
-        setError(''); setLoading(true); setResult(null);
+        setError(''); setLoading(true); setResult(null); setOrgTree(null); setIsWorkspacesExpanded(false);
         try {
-            const sysA = `${machineA}::${pathA}`;
-            const sysB = `${machineB}::${pathB}`;
+            const typeA = machines.find(m => m.id === machineA)?.type;
+            const typeB = machines.find(m => m.id === machineB)?.type;
+            
+            // Hardcodeamos la ruta segura cuando es SSH para evitar usar paths locales oxidados de la db/cache
+            const finalPathA = typeA === 'ssh' ? '~/.openclaw' : pathA;
+            const finalPathB = typeB === 'ssh' ? '~/.openclaw' : pathB;
+
+            const sysA = `${machineA}::${finalPathA}`;
+            const sysB = `${machineB}::${finalPathB}`;
             const resp = await fetch(`${API_URL}/api/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -207,8 +214,8 @@ const Analysis = () => {
         }
     };
 
-    const openOrgChart = async () => {
-        if (orgTree) return; // Already fetched
+    const openOrgChart = async (forceRefresh = false) => {
+        if (orgTree && !forceRefresh) return; // Already fetched
         setOrgLoading(true);
         try {
             const reportId = result?.id || urlReportId;
@@ -290,6 +297,36 @@ const Analysis = () => {
         }
     };
 
+    const handleFileDelete = async (node, systemIdentifier) => {
+        if (!window.confirm(`¿Estás seguro de que quieres borrar el archivo ${node.name} del ${systemIdentifier}?`)) {
+            return;
+        }
+
+        const systemPath = systemIdentifier === labelA ? (result?.system_a_path || `${machineA}::${pathA}`) : (result?.system_b_path || `${machineB}::${pathB}`);
+        try {
+            const payload = {
+                system_path: systemPath,
+                agent_name: node.realAgentName,
+                relative_file_path: node.path
+            };
+            const resp = await fetch(`${API_URL}/api/file`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (data.status === 'success') {
+                // Refresh organigram
+                setOrgTree(null);
+                openOrgChart(true);
+            } else {
+                setError(data.message || 'Error eliminando el archivo');
+            }
+        } catch(err) {
+            setError(err.message);
+        }
+    };
+
     const getRingData = () => {
         if (!result) return [];
         const data = result.metrics
@@ -315,11 +352,13 @@ const Analysis = () => {
                             >
                                 {machines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                             </select>
-                            <input
-                                placeholder="Ruta Absoluta (ej. /var/www/agentes)"
-                                value={pathA} onChange={e => setPathA(e.target.value)}
-                                style={{ padding: '12px', borderRadius: 'var(--radius-sm)', border: '2px solid rgba(59,130,246,0.3)', width: '100%', boxSizing: 'border-box' }}
-                            />
+                            {machines.find(m => m.id === machineA)?.type !== 'ssh' && (
+                                <input
+                                    placeholder="Ruta Absoluta (ej. /var/www/agentes)"
+                                    value={pathA} onChange={e => setPathA(e.target.value)}
+                                    style={{ padding: '12px', borderRadius: 'var(--radius-sm)', border: '2px solid rgba(59,130,246,0.3)', width: '100%', boxSizing: 'border-box' }}
+                                />
+                            )}
                         </div>
                     </div>
                     <span style={{ color: 'var(--color-text-secondary)', fontWeight: 700, fontSize: '1.1rem' }}>VS</span>
@@ -335,11 +374,13 @@ const Analysis = () => {
                             >
                                 {machines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                             </select>
-                            <input
-                                placeholder="Ruta Absoluta (ej. /var/www/agentes)"
-                                value={pathB} onChange={e => setPathB(e.target.value)}
-                                style={{ padding: '12px', borderRadius: 'var(--radius-sm)', border: '2px solid rgba(16,185,129,0.3)', width: '100%', boxSizing: 'border-box' }}
-                            />
+                            {machines.find(m => m.id === machineB)?.type !== 'ssh' && (
+                                <input
+                                    placeholder="Ruta Absoluta (ej. /var/www/agentes)"
+                                    value={pathB} onChange={e => setPathB(e.target.value)}
+                                    style={{ padding: '12px', borderRadius: 'var(--radius-sm)', border: '2px solid rgba(16,185,129,0.3)', width: '100%', boxSizing: 'border-box' }}
+                                />
+                            )}
                         </div>
                     </div>
                     <Button onClick={runAnalysis} disabled={loading}>
@@ -366,7 +407,6 @@ const Analysis = () => {
                         <circle className="dot dot2" cx="340" cy="50" r="10" fill="#7F77DD"/>
                         <circle className="dot dot3" cx="370" cy="50" r="10" fill="#7F77DD"/>
                     </svg>
-                    <h2 style={{ marginTop: '16px' }}>Ciego calculando diferencias sintácticas...</h2>
                 </div>
             )}
 
@@ -471,6 +511,7 @@ const Analysis = () => {
                                             labelA={labelA}
                                             labelB={labelB}
                                             onFileClick={handleFileClick}
+                                            onFileDelete={handleFileDelete}
                                         />
                                     </div>
                                 )}

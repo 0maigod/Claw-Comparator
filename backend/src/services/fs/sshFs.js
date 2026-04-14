@@ -139,6 +139,12 @@ export class SshFs {
         return await this.client.put(buffer, normPath);
     }
 
+    async unlink(filePath) {
+        await this.connect();
+        const normPath = this._normalize(filePath);
+        return await this.client.delete(normPath);
+    }
+
     // Path utilities (Using POSIX because SSH is mostly UNIX)
     joinPath(...parts) {
         return path.posix.join(...parts.map(p => this._normalize(p)));
