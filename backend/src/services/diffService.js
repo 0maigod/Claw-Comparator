@@ -316,11 +316,74 @@ export const getSystemTree = async (systemPath) => {
     return rootNode;
 };
 
+export const moveSystemFile = async (sysPath, agentName, relativeFilePath, newAgentName, newRelativeFilePath) => {
+    const { machineId, realPath } = parseSystemPath(sysPath);
+    const fsObj = getFsProvider(machineId);
+
+    const oldPath = fsObj.joinPath(realPath, agentName, relativeFilePath);
+    const newPath = fsObj.joinPath(realPath, newAgentName, newRelativeFilePath);
+    
+    await fsObj.mkdir(fsObj.dirname(newPath), { recursive: true });
+    await fsObj.rename(oldPath, newPath);
+};
+
+export const copySystemFile = async (sysPath, agentName, relativeFilePath, newAgentName, newRelativeFilePath) => {
+    const { machineId, realPath } = parseSystemPath(sysPath);
+    const fsObj = getFsProvider(machineId);
+
+    const oldPath = fsObj.joinPath(realPath, agentName, relativeFilePath);
+    const newPath = fsObj.joinPath(realPath, newAgentName, newRelativeFilePath);
+    
+    await fsObj.mkdir(fsObj.dirname(newPath), { recursive: true });
+    await fsObj.copy(oldPath, newPath);
+};
+
+export const getFolderFiles = async (sysPath, agentName, folderRelativePath) => {
+    const { machineId, realPath } = parseSystemPath(sysPath);
+    const fsObj = getFsProvider(machineId);
+
+    const basePath = folderRelativePath && folderRelativePath !== '/' 
+        ? fsObj.joinPath(realPath, agentName, folderRelativePath) 
+        : fsObj.joinPath(realPath, agentName);
+
+    let files = [];
+    async function walk(dir, relOuterPath) {
+        try {
+            const list = await fsObj.readdir(dir, { withFileTypes: true });
+            for (const item of list) {
+                if (item.name === 'proyectos') continue;
+                const fullPath = fsObj.joinPath(dir, item.name);
+                const itemRelPath = relOuterPath ? `${relOuterPath}/${item.name}` : item.name;
+                if (item.isDirectory()) {
+                    await walk(fullPath, itemRelPath);
+                } else if (item.isFile()) {
+                    files.push({ name: itemRelPath, fullPath });
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
+    
+    await walk(basePath, '');
+    
+    for (const f of files) {
+         try {
+             f.content = await fsObj.readFile(f.fullPath, 'utf8');
+         } catch(e) { f.content = ''; }
+    }
+    
+    return files;
+};
+
 export default {
     analyzeSystems,
     getSpecificDiff,
     getAllAgentDiffs,
     getSystemTree,
     saveFileToDisk,
-    deleteFileFromDisk
+    deleteFileFromDisk,
+    moveSystemFile,
+    copySystemFile,
+    getFolderFiles
 };

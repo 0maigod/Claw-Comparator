@@ -1,10 +1,12 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import multer from 'multer';
 import analysisController from './src/controllers/analysisController.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Middlewares
 app.use(cors());
@@ -29,6 +31,14 @@ app.post('/api/agent-concepts', analysisController.getAgentConcepts);
 app.post('/api/save-file', analysisController.saveFile);
 // Borra un archivo en disco
 app.delete('/api/file', analysisController.deleteFile);
+
+// Endpoints Individuales (Customizar)
+app.post('/api/system-tree-single', analysisController.getSingleSystemTree);
+app.post('/api/file/move', analysisController.moveFile);
+app.post('/api/file/upload', upload.single('file'), analysisController.uploadFile);
+app.post('/api/file/copy', analysisController.copyFile);
+app.get('/api/file/download', analysisController.downloadFile);
+app.get('/api/folder/download', analysisController.downloadFolder);
 
 // Error Handling Global (Regla IV: Nunca silencies un error)
 app.use((err, req, res, next) => {

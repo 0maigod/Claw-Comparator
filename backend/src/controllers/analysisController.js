@@ -1,4 +1,4 @@
-import { analyzeSystems, getSpecificDiff, getAllAgentDiffs, getSystemTree, saveFileToDisk, deleteFileFromDisk } from '../services/diffService.js';
+import { analyzeSystems, getSpecificDiff, getAllAgentDiffs, getSystemTree, saveFileToDisk, deleteFileFromDisk, moveSystemFile, copySystemFile, getFolderFiles } from '../services/diffService.js';
 import { extractConceptsFromDiff } from '../services/aiService.js';
 import { dbQuery, dbRun } from '../database/db.js';
 import fs from 'fs';
@@ -197,6 +197,108 @@ export const deleteFile = async (req, res, next) => {
     }
 };
 
+export const getSingleSystemTree = async (req, res, next) => {
+    try {
+        const { system_path } = req.body;
+        if (!system_path) {
+            return res.status(400).json({ status: 'error', message: 'Missing system_path' });
+        }
+        const tree = await getSystemTree(system_path);
+        res.json({ status: 'success', data: tree });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const moveFile = async (req, res, next) => {
+    try {
+        const { system_path, agent_name, relative_file_path, new_agent_name, new_relative_file_path } = req.body;
+        if (!system_path || !agent_name || !relative_file_path || !new_agent_name || !new_relative_file_path) {
+            return res.status(400).json({ status: 'error', message: 'Missing args for move' });
+        }
+        await moveSystemFile(system_path, agent_name, relative_file_path, new_agent_name, new_relative_file_path);
+        res.json({ status: 'success' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const uploadFile = async (req, res, next) => {
+    try {
+        const { system_path, agent_name, relative_file_path } = req.body;
+        if (!system_path || !agent_name || !relative_file_path || !req.file) {
+            return res.status(400).json({ status: 'error', message: 'Missing args or file for upload' });
+        }
+        
+        if (!req.file.originalname.endsWith('.md')) {
+             return res.status(400).json({ status: 'error', message: 'Solo se permiten archivos .md' });
+        }
+
+        const newContent = req.file.buffer.toString('utf-8');
+        await saveFileToDisk(system_path, agent_name, relative_file_path, newContent);
+        res.json({ status: 'success' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const copyFile = async (req, res, next) => {
+    try {
+        const { system_path, agent_name, relative_file_path, new_agent_name, new_relative_file_path } = req.body;
+        if (!system_path || !agent_name || !relative_file_path || !new_agent_name || !new_relative_file_path) {
+            return res.status(400).json({ status: 'error', message: 'Missing args for copy' });
+        }
+        await copySystemFile(system_path, agent_name, relative_file_path, new_agent_name, new_relative_file_path);
+        res.json({ status: 'success' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const downloadFile = async (req, res, next) => {
+    try {
+        const { system_path, agent_name, relative_file_path } = req.query;
+        if (!system_path || !agent_name || !relative_file_path) {
+            return res.status(400).json({ status: 'error', message: 'Missing args for download' });
+        }
+        const diffs = await getSpecificDiff(system_path, system_path, agent_name, relative_file_path);
+        const fileName = relative_file_path.split('/').pop();
+        res.setHeader('Content-disposition', `attachment; filename=${fileName}`);
+        res.setHeader('Content-type', 'text/markdown');
+        res.send(diffs.textA); // textA corresponds to system_path
+    } catch (err) {
+        next(err);
+    }
+};
+
+import archiver from 'archiver';
+
+export const downloadFolder = async (req, res, next) => {
+    try {
+        const { system_path, agent_name, folder_path } = req.query; // folder_path can be empty for agent root
+        if (!system_path || !agent_name) {
+            return res.status(400).json({ status: 'error', message: 'Missing args for folder download' });
+        }
+
+        const files = await getFolderFiles(system_path, agent_name, folder_path);
+        
+        const folderName = folder_path ? folder_path.split('/').filter(Boolean).pop() : agent_name;
+        res.setHeader('Content-disposition', `attachment; filename=${folderName}.zip`);
+        res.setHeader('Content-type', 'application/zip');
+        
+        const zip = archiver('zip', { zlib: { level: 9 } });
+        zip.pipe(res);
+        
+        for (const file of files) {
+            zip.append(file.content, { name: file.name });
+        }
+        
+        zip.finalize();
+    } catch (err) {
+        next(err);
+    }
+};
+
 export default {
     getMachines,
     getHistoricalReports,
@@ -206,5 +308,11 @@ export default {
     getAgentConcepts,
     getReportTree,
     saveFile,
-    deleteFile
+    deleteFile,
+    getSingleSystemTree,
+    moveFile,
+    uploadFile,
+    copyFile,
+    downloadFile,
+    downloadFolder
 };

@@ -145,6 +145,21 @@ export class SshFs {
         return await this.client.delete(normPath);
     }
 
+    async rename(oldPath, newPath) {
+        await this.connect();
+        const normOldPath = this._normalize(oldPath);
+        const normNewPath = this._normalize(newPath);
+        return await this.client.rename(normOldPath, normNewPath);
+    }
+
+    async copy(oldPath, newPath) {
+        await this.connect();
+        const normOldPath = this._normalize(oldPath);
+        const normNewPath = this._normalize(newPath);
+        const buffer = await this.client.get(normOldPath);
+        return await this.client.put(buffer, normNewPath);
+    }
+
     // Path utilities (Using POSIX because SSH is mostly UNIX)
     joinPath(...parts) {
         return path.posix.join(...parts.map(p => this._normalize(p)));

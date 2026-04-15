@@ -2,8 +2,9 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 
 const navItems = [
-  { label: 'Histórico', path: '/' },
-  { label: 'Analizar', path: '/analyzer' }
+  { label: 'Customizar', path: '/' },
+  { label: 'Analizar', path: '/analyzer' },
+  { label: 'Histórico', path: '/historical' }
 ];
 
 const DashboardLayout = ({ children }) => {

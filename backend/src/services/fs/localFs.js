@@ -30,6 +30,14 @@ export class LocalFs {
         return await fs.unlink(filePath);
     }
 
+    async rename(oldPath, newPath) {
+        return await fs.rename(oldPath, newPath);
+    }
+
+    async copy(oldPath, newPath) {
+        return await fs.copyFile(oldPath, newPath);
+    }
+
     async writeFile(filePath, data, encoding = 'utf-8') {
         return await fs.writeFile(filePath, data, encoding);
     }
