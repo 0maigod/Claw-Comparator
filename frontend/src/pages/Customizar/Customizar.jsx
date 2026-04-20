@@ -121,6 +121,87 @@ const Customizar = () => {
         }
     };
 
+    const handleFileCreate = async (folderNode) => {
+        let newName = window.prompt('Ingrese el nombre para el nuevo archivo:', 'nuevo_archivo.md');
+        if (!newName) return;
+        if (!newName.endsWith('.md')) {
+             newName += '.md';
+        }
+        
+        const typeA = machines.find(m => m.id === machineA)?.type;
+        const finalPathA = typeA === 'ssh' ? '~/.openclaw' : pathA;
+        const sysPath = `${machineA}::${finalPathA}`;
+        
+        const agentName = folderNode.type === 'agent' ? folderNode.name : (folderNode.realAgentName || folderNode.name);
+        const relativeFolder = folderNode.type === 'agent' ? '' : (folderNode.path || '');
+        const newRelativeFilePath = relativeFolder ? `${relativeFolder}/${newName}` : newName;
+        
+        try {
+            setLoading(true);
+            const resp = await fetch(`${API_URL}/api/save-file`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system_path: sysPath,
+                    agent_name: agentName,
+                    relative_file_path: newRelativeFilePath,
+                    new_content: ''
+                })
+            });
+            const data = await resp.json();
+            if (data.status === 'success') {
+                loadTree();
+            } else {
+                setError(data.message || 'Error al crear el archivo');
+            }
+        } catch(err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleFileRename = async (node) => {
+        const newName = window.prompt(`Ingresa el nuevo nombre para "${node.name}":`, node.name);
+        if (!newName || newName === node.name) return;
+        
+        const typeA = machines.find(m => m.id === machineA)?.type;
+        const finalPathA = typeA === 'ssh' ? '~/.openclaw' : pathA;
+        const sysPath = `${machineA}::${finalPathA}`;
+        
+        let newRelativeFilePath = node.path.substring(0, node.path.lastIndexOf('/'));
+        if (newRelativeFilePath) {
+            newRelativeFilePath += '/' + newName;
+        } else {
+            newRelativeFilePath = newName;
+        }
+        
+        try {
+            setLoading(true);
+            const resp = await fetch(`${API_URL}/api/file/move`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system_path: sysPath,
+                    agent_name: node.realAgentName,
+                    relative_file_path: node.path,
+                    new_agent_name: node.realAgentName,
+                    new_relative_file_path: newRelativeFilePath
+                })
+            });
+            const data = await resp.json();
+            if (data.status === 'success') {
+                loadTree();
+            } else {
+                setError(data.message || 'Error al renombrar');
+            }
+        } catch(err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const getAgentPathForFolderNode = (folderNode) => {
         // En D3OrgChart/DiffService, type: 'agent' corresponde al nodo raíz del agente. 
         // type: 'folder' corresponde a subdirectorios. Si selecciono carpeta, necesito el agentName y la ruta relativa.
@@ -355,6 +436,8 @@ const Customizar = () => {
     }, [treeData]);
 
     const handlers = {
+        onFileCreate: handleFileCreate,
+        onFileRename: handleFileRename,
         onFileDelete: handleFileDelete,
         onFileEdit: handleFileEdit,
         onFileUpload: handleFileUpload,

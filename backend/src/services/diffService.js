@@ -262,8 +262,6 @@ async function collectFiles(fsObj, dir, parentNode, agentRoot, realAgentName) {
     try {
         const items = await fsObj.readdir(dir, { withFileTypes: true });
         for (const item of items) {
-            if (item.name === 'proyectos') continue; // Omitir proyectos
-
             const fullPath = fsObj.joinPath(dir, item.name);
             if (item.isDirectory()) {
                 const subNode = { name: item.name, type: 'folder', children: [] };
@@ -351,7 +349,6 @@ export const getFolderFiles = async (sysPath, agentName, folderRelativePath) => 
         try {
             const list = await fsObj.readdir(dir, { withFileTypes: true });
             for (const item of list) {
-                if (item.name === 'proyectos') continue;
                 const fullPath = fsObj.joinPath(dir, item.name);
                 const itemRelPath = relOuterPath ? `${relOuterPath}/${item.name}` : item.name;
                 if (item.isDirectory()) {

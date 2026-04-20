@@ -7,6 +7,8 @@ const IconCopy = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="non
 const IconPaste = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>;
 const IconDownload = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
 const IconUpload = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>;
+const IconRename = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
+const IconNewFile = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16h16V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="12" x2="12" y2="18"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>;
 
 const TreeNode = ({ node, level, index, handlers, clipboard, pathPrefix, expandedPaths }) => {
     const nodeId = pathPrefix ? `${pathPrefix}/${node.name}` : node.name;
@@ -61,6 +63,7 @@ const TreeNode = ({ node, level, index, handlers, clipboard, pathPrefix, expande
                 
                 {/* Contenedor de iconos reservado para evitar Layout Shift */}
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: '2px', opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? 'auto' : 'none', transition: 'opacity 0.15s' }}>
+                    <button onClick={(e) => { e.stopPropagation(); handlers.onFileRename(node); }} style={actionButtonStyle} title="Renombrar Archivo"><IconRename /></button>
                     <button onClick={(e) => { e.stopPropagation(); handlers.onFileDownload(node); }} style={actionButtonStyle} title="Descargar Archivo"><IconDownload /></button>
                     <button onClick={(e) => { e.stopPropagation(); handlers.onFileCopy(node); }} style={actionButtonStyle} title="Copiar Archivo"><IconCopy /></button>
                     <button onClick={(e) => { e.stopPropagation(); handlers.onFileDelete(node); }} style={actionButtonStyle} title="Eliminar Archivo"><IconTrash /></button>
@@ -97,6 +100,9 @@ const TreeNode = ({ node, level, index, handlers, clipboard, pathPrefix, expande
                 </span>
                 
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: '2px', opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? 'auto' : 'none', transition: 'opacity 0.15s' }}>
+                    <button onClick={(e) => { e.stopPropagation(); handlers.onFileCreate(node); }} style={actionButtonStyle} title="Crear Nuevo Archivo">
+                        <IconNewFile />
+                    </button>
                     {clipboard && (
                        <button onClick={(e) => { e.stopPropagation(); handlers.onFilePaste(node); }} style={actionButtonStyle} title={`Pegar ${clipboard.name} aquí`}>
                            <IconPaste />
