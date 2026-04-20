@@ -151,7 +151,7 @@ const FileExplorer = ({ nodes, handlers, clipboard, expandedPaths }) => {
         if ((atBottom && e.deltaY > 0) || (atTop && e.deltaY < 0)) {
             const parentMain = el.closest('main');
             if (parentMain) {
-                parentMain.scrollTop += e.deltaY;
+                parentMain.scrollBy({ top: e.deltaY * 0.8, behavior: 'smooth' });
             }
         }
     };
