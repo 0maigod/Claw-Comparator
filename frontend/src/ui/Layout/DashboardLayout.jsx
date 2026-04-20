@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 
 const navItems = [
   { label: 'Customizar', path: '/' },
@@ -8,6 +8,17 @@ const navItems = [
 ];
 
 const DashboardLayout = ({ children }) => {
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setHasInteracted(false);
+  }, [location.pathname]);
+
+  const handleInteraction = () => {
+    if (!hasInteracted) setHasInteracted(true);
+  };
+
   return (
     <div style={{ 
       display: 'flex', 
@@ -63,7 +74,12 @@ const DashboardLayout = ({ children }) => {
       </aside>
 
       {/* Main Content Area */}
-      <main style={{
+      <main 
+         onMouseDown={handleInteraction}
+         onWheel={handleInteraction}
+         onTouchStart={handleInteraction}
+         onKeyDown={handleInteraction}
+         style={{
         flex: 1,
         backgroundColor: 'var(--color-bg-canvas)',
         overflowY: 'auto',
@@ -73,10 +89,27 @@ const DashboardLayout = ({ children }) => {
       }}>
         {/* Top Header */}
         <header style={{ 
-          height: '70px', padding: '0 var(--spacing-xl)', display: 'flex', alignItems: 'center',
-          backgroundColor: 'var(--color-bg-card)', borderBottom: '1px solid var(--color-bg-canvas)', boxShadow: 'var(--shadow-sm)'
+          height: hasInteracted ? '2px' : '70px', 
+          minHeight: hasInteracted ? '2px' : '70px',
+          padding: hasInteracted ? '0' : '0 var(--spacing-xl)', 
+          display: 'flex', 
+          alignItems: 'center',
+          backgroundColor: 'var(--color-bg-card)', 
+          borderBottom: hasInteracted ? 'none' : '1px solid var(--color-bg-canvas)', 
+          boxShadow: hasInteracted ? 'none' : 'var(--shadow-sm)',
+          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden'
         }}>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>Dashboard Analyst</h1>
+          <h1 style={{ 
+            fontSize: '1.25rem', 
+            fontWeight: 600, 
+            color: 'var(--color-text-primary)',
+            opacity: hasInteracted ? 0 : 1,
+            transform: hasInteracted ? 'translateY(-10px)' : 'translateY(0)',
+            transition: 'all 0.3s ease',
+            whiteSpace: 'nowrap',
+            margin: 0
+          }}>Dashboard Analyst</h1>
         </header>
 
         {/* Page Canvas */}
