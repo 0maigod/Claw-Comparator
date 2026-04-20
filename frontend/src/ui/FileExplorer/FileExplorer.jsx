@@ -142,14 +142,31 @@ const TreeNode = ({ node, level, index, handlers, clipboard, pathPrefix, expande
 
 const FileExplorer = ({ nodes, handlers, clipboard, expandedPaths }) => {
     if (!nodes || nodes.length === 0) return <div style={{ padding: '20px', color: 'var(--color-text-secondary)' }}>No hay datos para mostrar</div>;
+    
+    const handleWheel = (e) => {
+        const el = e.currentTarget;
+        const atBottom = Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop) <= 2;
+        const atTop = el.scrollTop <= 0;
+        
+        if ((atBottom && e.deltaY > 0) || (atTop && e.deltaY < 0)) {
+            const parentMain = el.closest('main');
+            if (parentMain) {
+                parentMain.scrollTop += e.deltaY;
+            }
+        }
+    };
+
     return (
-        <div style={{
+        <div 
+            onWheel={handleWheel}
+            style={{
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-md)',
             backgroundColor: 'var(--color-bg-canvas)',
             overflowY: 'auto',
             maxHeight: '600px',
-            padding: '4px 0'
+            padding: '4px 0',
+            overscrollBehavior: 'contain'
         }}>
             {nodes.map((node, i) => (
                  <TreeNode 
