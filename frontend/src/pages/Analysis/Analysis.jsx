@@ -23,6 +23,7 @@ const Analysis = () => {
     const [machineB, setMachineB] = useState(() => localStorage.getItem('machineB') || 'local');
     const [machines, setMachines] = useState([{ id: 'local', name: 'Este Equipo (Local)' }]);
     const [loading, setLoading] = useState(false);
+    const [isConfigCollapsed, setIsConfigCollapsed] = useState(false);
     const [result, setResult] = useState(() => {
         if (urlReportId) return null;
         const cached = localStorage.getItem('analysisResult');
@@ -167,8 +168,12 @@ const Analysis = () => {
                 body: JSON.stringify({ system_a_path: sysA, system_b_path: sysB })
             });
             const data = await resp.json();
-            if (data.status === 'success') setResult(data.data);
-            else setError(data.message || 'Error en el servidor');
+            if (data.status === 'success') {
+                setResult(data.data);
+                setIsConfigCollapsed(true);
+            } else {
+                setError(data.message || 'Error en el servidor');
+            }
         } catch (err) {
             setError(err.message);
         } finally {
@@ -338,7 +343,12 @@ const Analysis = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
             {/* Configuración de Paths con indicadores de color A / B */}
-            <Card title="Configurar Orígenes de Datos (Local o SSH)">
+            <Card 
+                title="Configurar Orígenes de Datos (Local o SSH)"
+                isCollapsed={isConfigCollapsed}
+                onExpand={() => setIsConfigCollapsed(false)}
+                collapseText="CONFIGURACION"
+            >
                 <div style={{ display: 'flex', gap: 'var(--spacing-md)', alignItems: 'center', marginTop: 'var(--spacing-sm)' }}>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

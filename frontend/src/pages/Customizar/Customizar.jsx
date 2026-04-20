@@ -11,6 +11,7 @@ const Customizar = () => {
     const [machineA, setMachineA] = useState(() => localStorage.getItem('customMachineA') || 'local');
     const [machines, setMachines] = useState([{ id: 'local', name: 'Este Equipo (Local)' }]);
     const [loading, setLoading] = useState(false);
+    const [isConfigCollapsed, setIsConfigCollapsed] = useState(false);
     const [treeData, setTreeData] = useState(null);
     const [error, setError] = useState('');
 
@@ -72,8 +73,12 @@ const Customizar = () => {
                 body: JSON.stringify({ system_path: sysA })
             });
             const data = await resp.json();
-            if (data.status === 'success') setTreeData(data.data);
-            else setError(data.message || 'Error cargando árbol');
+            if (data.status === 'success') {
+                setTreeData(data.data);
+                setIsConfigCollapsed(true);
+            } else {
+                setError(data.message || 'Error cargando árbol');
+            }
         } catch (err) {
             setError(err.message);
         } finally {
@@ -452,7 +457,12 @@ const Customizar = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
-            <Card title="Explorar / Customizar Sistema">
+            <Card 
+                title="Explorar / Customizar Sistema"
+                isCollapsed={isConfigCollapsed}
+                onExpand={() => setIsConfigCollapsed(false)}
+                collapseText="CONFIGURACION"
+            >
                 <div style={{ display: 'flex', gap: 'var(--spacing-md)', alignItems: 'center', marginTop: 'var(--spacing-sm)' }}>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
