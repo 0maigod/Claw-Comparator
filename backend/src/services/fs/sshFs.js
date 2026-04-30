@@ -45,9 +45,20 @@ export class SshFs {
             }
 
             console.log(`[SSH FS] Conectando a ${config.host} ...`);
-            await this.client.connect(config);
-            this.connected = true;
-            console.log(`[SSH FS] Conectado a ${config.host} exitosamente.`);
+            try {
+                await this.client.connect(config);
+                this.connected = true;
+                console.log(`[SSH FS] Conectado a ${config.host} exitosamente.`);
+            } catch (err) {
+                let detail = err.message;
+                if (err.message.includes('ETIMEDOUT') || err.code === 'ETIMEDOUT') detail = 'Tiempo de espera agotado (ETIMEDOUT). ¿Está la máquina apagada, suspendida o fuera de la red?';
+                else if (err.message.includes('ECONNREFUSED') || err.code === 'ECONNREFUSED') detail = 'Conexión rechazada (ECONNREFUSED). ¿Está encendido el servidor SSH en esa máquina?';
+                else if (err.message.includes('No route to host')) detail = 'No hay ruta hacia el host. ¿Está encendida la máquina y conectada a la red?';
+                else if (err.message.includes('All configured authentication methods failed')) detail = 'Fallo de autenticación. Verifica usuario, contraseña o la llave SSH.';
+                else if (err.code === 'ENOTFOUND') detail = 'Host no encontrado (ENOTFOUND). Verifica la IP o nombre del host.';
+                
+                throw new Error(`[SSH] ${detail}`);
+            }
         })();
 
         await this.connectionPromise;

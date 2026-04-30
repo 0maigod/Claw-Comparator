@@ -41,7 +41,7 @@ async function scanSystemAgents(systemPath) {
             }
         }
     } catch (e) {
-        throw new Error(`Error escaneando el sistema: ${systemPath}. Verifique la ruta y la conexión.`);
+        throw new Error(`Error escaneando el sistema: ${systemPath}. Detalles: ${e.message}`);
     }
     return { agents, fsObj };
 }
@@ -308,7 +308,8 @@ export const getSystemTree = async (systemPath) => {
             rootNode.children.push(agentNode);
         }
     } catch (e) {
-        // System path may be inaccessible — return empty tree gracefully
+        // System path may be inaccessible — propagate error so UI can display it
+        throw e;
     }
 
     return rootNode;
